@@ -1,0 +1,19 @@
+# Nakisama 默认配置文件
+# Version: 0.0.1
+#
+# 管理员列表
+admin:
+  - 230902234916
+
+# 通信配置
+server:
+  # HTTP 监听地址
+  address: 127.0.0.1:5701
+  # 通信密钥
+  secret: ''
+  # 反向 HTTP 地址
+  post: 127.0.0.1:5700
+  # OneBot 协议版本
+  version: 11
+  # 反向 HTTP 超时时间 (s)
+  timeout: 5

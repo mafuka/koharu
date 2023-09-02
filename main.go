@@ -11,12 +11,23 @@ import (
 	"time"
 
 	"github.com/kwaain/nakisama/lib/conf"
+	"github.com/kwaain/nakisama/lib/logger"
 	"github.com/kwaain/nakisama/router"
 	"go.uber.org/zap"
 )
 
 func main() {
+	Logger, err := logger.NewLogger("log/")
+	if err != nil {
+		panic(err)
+	}
+
 	err = conf.Load("config.yml")
+	if err != nil {
+		Logger.Error("Error loading configuration file", zap.Error(err))
+	}
+	Logger.Info("Configuration file loaded")
+
 	router := router.SetupRouter()
 
 	srv := &http.Server{

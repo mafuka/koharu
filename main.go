@@ -10,11 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kwaain/nakisama/lib/conf"
 	"github.com/kwaain/nakisama/router"
 	"go.uber.org/zap"
 )
 
 func main() {
+	err = conf.Load("config.yml")
 	router := router.SetupRouter()
 
 	srv := &http.Server{

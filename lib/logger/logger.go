@@ -17,74 +17,84 @@ type DateFileWriter struct {
 	currentFile *os.File
 }
 
+// Global Logger
+var Log *Logger
+
 type Logger struct {
 	logger *zap.Logger
 }
 
-func NewLogger(outputPath string) (*Logger, error) {
+func NewLogger(outputPath string) error {
 	writer, err := NewDateFileWriter(filepath.Dir(outputPath))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	encoderConfig := zapcore.EncoderConfig{
-		LevelKey:    "level",
-		TimeKey:     "time",
-		CallerKey:   "caller",
-		MessageKey:  "msg",
-		EncodeLevel: zapcore.CapitalLevelEncoder,
-		EncodeTime:  zapcore.ISO8601TimeEncoder,
+		LevelKey:      "level",
+		TimeKey:       "time",
+		CallerKey:     "caller",
+		MessageKey:    "msg",
+		FunctionKey:   "func",
+		StacktraceKey: "stacktrace",
+		EncodeLevel:   zapcore.CapitalLevelEncoder,
+		EncodeTime:    zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.000"),
 		EncodeCaller: func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
-			enc.AppendString(fmt.Sprintf("%s:%d:%s", filepath.Base(caller.File), caller.Line, caller.Function))
+			enc.AppendString(fmt.Sprintf("%s:%d", filepath.Base(caller.File), caller.Line))
 		},
 	}
 
-	// consoleEncoder := zapcore.NewConsoleEncoder(encoderConfig)
 	consoleEncoder := zapcore.NewJSONEncoder(encoderConfig)
 	fileEncoder := zapcore.NewJSONEncoder(encoderConfig)
 
 	consoleLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl <= zapcore.InfoLevel
+		return lvl <= zapcore.ErrorLevel
 	})
 
 	fileLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl <= zapcore.InfoLevel
+		return lvl <= zapcore.ErrorLevel
 	})
 
 	consoleOutput := zapcore.Lock(os.Stdout)
 	fileOutput := zapcore.AddSync(writer)
 
-	core := zapcore.NewTee(
-		zapcore.NewCore(consoleEncoder, consoleOutput, consoleLevel),
-		zapcore.NewCore(fileEncoder, fileOutput, fileLevel),
+	consoleCore := zapcore.NewCore(consoleEncoder, consoleOutput, consoleLevel)
+	fileCore := zapcore.NewCore(fileEncoder, fileOutput, fileLevel)
+
+	// Create the logger with the async core
+	logger := zap.New(
+		zapcore.NewTee(consoleCore, fileCore),
+		zap.AddCaller(),
+		zap.AddCallerSkip(1),
 	)
 
-	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
-	return &Logger{logger: logger}, nil
+	// Global Logger
+	Log = &Logger{logger: logger}
+	return nil
 }
 
-func (l *Logger) Debug(msg string, fields ...zap.Field) {
-	l.logger.Debug(msg, fields...)
+func Debug(msg string, fields ...zap.Field) {
+	Log.logger.Debug(msg, fields...)
 }
 
-func (l *Logger) Info(msg string, fields ...zap.Field) {
-	l.logger.Info(msg, fields...)
+func Info(msg string, fields ...zap.Field) {
+	Log.logger.Info(msg, fields...)
 }
 
-func (l *Logger) Warn(msg string, fields ...zap.Field) {
-	l.logger.Warn(msg, fields...)
+func Warn(msg string, fields ...zap.Field) {
+	Log.logger.Warn(msg, fields...)
 }
 
-func (l *Logger) Error(msg string, fields ...zap.Field) {
-	l.logger.Error(msg, fields...)
+func Error(msg string, fields ...zap.Field) {
+	Log.logger.Error(msg, fields...)
 }
 
-func (l *Logger) Fatal(msg string, fields ...zap.Field) {
-	l.logger.Fatal(msg, fields...)
+func Fatal(msg string, fields ...zap.Field) {
+	Log.logger.Fatal(msg, fields...)
 }
 
-func (l *Logger) Close() error {
-	return l.logger.Sync()
+func Close() error {
+	return Log.logger.Sync()
 }
 
 func NewDateFileWriter(logDir string) (*DateFileWriter, error) {
@@ -148,7 +158,6 @@ func (w *DateFileWriter) openNewFile() error {
 	now := time.Now()
 	date := now.Format("2006-01-02")
 	logFilePath := filepath.Join(w.logDir, fmt.Sprintf("%s.log", date))
-	// fmt.Println("Opening new file:", logFilePath)
 
 	file, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

@@ -11,8 +11,8 @@ server:
   address: 127.0.0.1:5701
   # 通信密钥
   secret: ''
-  # 反向 HTTP 地址
-  post: 127.0.0.1:5700
+  # 反向 POST 地址
+  post: http://127.0.0.1:5700
   # OneBot 协议版本
   version: 11
   # 反向 HTTP 超时时间 (s)

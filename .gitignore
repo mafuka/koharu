@@ -35,6 +35,7 @@ go.work
 *.vsix
 
 # Files of the development environment
+config.yml
 go-cqhttp/
 log/
-config.yml
+tmp/

@@ -3,7 +3,6 @@ package conf
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sync"
 
@@ -57,10 +56,8 @@ func Get() Conf {
 func Reload(filePath string) error {
 	err := Load(filePath)
 	if err != nil {
-		return fmt.Errorf("无法重新加载配置文件：%w", err)
+		return fmt.Errorf("无法重载配置文件：%w", err)
 	}
-
-	log.Println("配置文件已成功重新加载")
 
 	return nil
 }

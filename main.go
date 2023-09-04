@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,16 +16,18 @@ import (
 )
 
 func main() {
-	Logger, err := logger.NewLogger("log/")
+	var err error
+
+	err = logger.NewLogger("log/")
 	if err != nil {
-		panic(err)
+		panic("初始化日志记录器失败: " + err.Error())
 	}
 
 	err = conf.Load("config.yml")
 	if err != nil {
-		Logger.Error("Error loading configuration file", zap.Error(err))
+		logger.Fatal("加载配置文件失败", zap.Error(err))
 	}
-	Logger.Info("Configuration file loaded")
+	logger.Info("配置文件加载成功")
 
 	router := router.SetupRouter()
 
@@ -37,22 +38,30 @@ func main() {
 
 	// Gracefully Shutdown
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
-			log.Printf("listen: %s\n", err)
+		err := srv.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("监听服务错误", zap.Error(err))
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
+	logger.Info("服务器正在关闭...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server forced to shutdown:", err)
+	err = srv.Shutdown(ctx)
+	if err != nil {
+		logger.Error("服务器被迫关闭", zap.Error(err))
 	}
 
-	log.Println("Server exiting")
+	logger.Info("服务器优雅地退出")
+
+	// Close the logger
+	err = logger.Close()
+	if err != nil {
+		logger.Error("关闭日志记录器失败", zap.Error(err))
+	}
 }

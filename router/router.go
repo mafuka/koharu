@@ -11,7 +11,9 @@ import (
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
 
-	router.Use(middleware.Echo())
+	// U: 23-10-03 00:26.
+	router.Use(middleware.WithCustomContext())    // 初始化自定义上下文
+	router.Use(middleware.UseCustomMiddlewares()) // 使用自定义中间件
 
 	router.GET("/", func(c *gin.Context) {
 		time.Sleep(5 * time.Second)

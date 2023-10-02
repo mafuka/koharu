@@ -1,0 +1,7 @@
+{
+  "editor.tabSize": 2,
+  "editor.linkedEditing": true,
+  "files.autoSave": "onFocusChange",
+  "editor.formatOnSave": true,
+  "editor.rulers": [60, 80, 120]
+}

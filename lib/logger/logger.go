@@ -1,3 +1,5 @@
+// logger 包提供了日志记录功能，基于 zap 实现。支持同时输出到控制台和文件，
+// 文件按日期分割，日志格式为 JSON 格式。
 package logger
 
 import (

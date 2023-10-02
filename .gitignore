@@ -39,3 +39,5 @@ config.yml
 go-cqhttp/
 log/
 tmp/
+
+.DS_Store

@@ -1,3 +1,4 @@
+// middleware 包含了一些中间件函数，用于处理消息。
 package middleware
 
 import (
@@ -23,6 +24,11 @@ type Message struct {
 }
 
 // Echo 是一个中间件函数，会复述私聊消息。
+//
+// Deprecated: 这是刚开始用中间件做消息处理时测试用的，现在已经没用了
+//
+// C: 23-09-04 19:mm;
+// U: 23-10-03 01:27.
 func Echo() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var message Message

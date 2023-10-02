@@ -1,3 +1,4 @@
+// request 包提供了发送 HTTP 请求的方法。
 package request
 
 import (

@@ -28,7 +28,7 @@ func Whitelist(cc *CustomContext) gin.HandlerFunc {
 		e := cc.MessageEvent
 
 		userList := []int{6025868}
-		groupList := []int{833938858}
+		groupList := []int{345868660}
 
 		switch e.MessageType {
 		case "private":

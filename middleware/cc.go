@@ -71,5 +71,6 @@ func UseCustomMiddlewares() gin.HandlerFunc {
 		// 自定义中间件链
 		Handler(cc)(c)
 		Whitelist(cc)(c)
+		OffTopic(cc)(c)
 	}
 }

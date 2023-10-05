@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kwaain/nakisama/api"
+	"github.com/kwaain/nakisama/lib/api"
 	"github.com/kwaain/nakisama/lib/logger"
 	"go.uber.org/zap"
 )
@@ -28,7 +28,7 @@ type Message struct {
 // Deprecated: 这是刚开始用中间件做消息处理时测试用的，现在已经没用了
 //
 // C: 23-09-04 19:mm;
-// U: 23-10-03 01:27.
+// U: 23-10-03 14:41.
 func Echo() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var message Message
@@ -39,9 +39,12 @@ func Echo() gin.HandlerFunc {
 		}
 
 		if message.MessageType == "private" && strings.HasPrefix(message.Message, "/echo") {
-			userID := message.UserID
-			content := message.Message
-			msgID, err := api.SendPrivateMsg(userID, 0, content, false)
+			msg := api.PrivateMsg{
+				UserID:  message.UserID,
+				Message: message.Message,
+			}
+
+			msgID, err := api.SendPrivateMsg(msg)
 			if err != nil {
 				logger.Error("发送私聊消息失败", zap.Error(err))
 				return

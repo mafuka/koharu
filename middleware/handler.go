@@ -16,10 +16,13 @@ import (
 // U: 23-10-03 01:28.
 func Handler(cc *CustomContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		logger.Debug("x01", zap.Any("cc", cc))
 		// 获取并解析原始数据
 		r, err := c.GetRawData()
 		if err != nil {
 			logger.Error("获取新上报事件的原始数据失败", zap.Error(err))
+
+			c.Abort()
 			return
 		}
 
@@ -27,6 +30,8 @@ func Handler(cc *CustomContext) gin.HandlerFunc {
 		err = json.Unmarshal(r, &newEvent)
 		if err != nil {
 			logger.Error("解析新上报事件失败", zap.Error(err))
+
+			c.Abort()
 			return
 		}
 
@@ -37,6 +42,8 @@ func Handler(cc *CustomContext) gin.HandlerFunc {
 			err := json.Unmarshal(r, &messageEvent)
 			if err != nil {
 				logger.Error("解析消息事件失败", zap.Error(err))
+
+				c.Abort()
 				return
 			}
 
@@ -44,6 +51,8 @@ func Handler(cc *CustomContext) gin.HandlerFunc {
 
 		case "message_sent":
 			logger.Warn("暂不支持处理机器人自己发送的消息")
+
+			c.Abort()
 			return
 
 		case "request":
@@ -51,6 +60,8 @@ func Handler(cc *CustomContext) gin.HandlerFunc {
 			err := json.Unmarshal(r, &requestEvent)
 			if err != nil {
 				logger.Error("解析请求事件失败", zap.Error(err))
+
+				c.Abort()
 				return
 			}
 
@@ -61,6 +72,8 @@ func Handler(cc *CustomContext) gin.HandlerFunc {
 			err := json.Unmarshal(r, &noticeEvent)
 			if err != nil {
 				logger.Error("解析通知事件失败", zap.Error(err))
+
+				c.Abort()
 				return
 			}
 
@@ -71,6 +84,8 @@ func Handler(cc *CustomContext) gin.HandlerFunc {
 			err := json.Unmarshal(r, &metaEvent)
 			if err != nil {
 				logger.Warn("暂不支持处理元数据事件")
+
+				c.Abort()
 				return
 			}
 
@@ -78,6 +93,9 @@ func Handler(cc *CustomContext) gin.HandlerFunc {
 		default:
 			err := fmt.Errorf("未知的事件类型 %s", newEvent.PostType)
 			logger.Error("解析新上报事件失败", zap.Error(err))
+
+			c.Abort()
+			return
 		}
 
 		// debug

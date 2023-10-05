@@ -33,11 +33,11 @@ func NewLogger(outputPath string) error {
 	}
 
 	encoderConfig := zapcore.EncoderConfig{
-		LevelKey:      "level",
-		TimeKey:       "time",
-		CallerKey:     "caller",
-		MessageKey:    "msg",
-		FunctionKey:   "func",
+		LevelKey:   "level",
+		TimeKey:    "time",
+		CallerKey:  "caller",
+		MessageKey: "msg",
+		// FunctionKey:   "func",
 		StacktraceKey: "stacktrace",
 		EncodeLevel:   zapcore.CapitalLevelEncoder,
 		EncodeTime:    zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.000"),
@@ -46,7 +46,7 @@ func NewLogger(outputPath string) error {
 		},
 	}
 
-	consoleEncoder := zapcore.NewJSONEncoder(encoderConfig)
+	consoleEncoder := zapcore.NewConsoleEncoder(encoderConfig)
 	fileEncoder := zapcore.NewJSONEncoder(encoderConfig)
 
 	consoleLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {

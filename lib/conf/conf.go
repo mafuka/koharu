@@ -18,7 +18,7 @@ type ServerConf struct {
 }
 
 type Conf struct {
-	Admin  []string   `yaml:"admin"`
+	Admin  []int64    `yaml:"admin"`
 	Server ServerConf `yaml:"server"`
 }
 

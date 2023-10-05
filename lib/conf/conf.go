@@ -9,6 +9,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type Conf struct {
+	Admin     []int64    `yaml:"admin"`
+	Server    ServerConf `yaml:"server"`
+	Whitelist Whitelist  `yaml:"whitelist"`
+}
+
 type ServerConf struct {
 	Address string `yaml:"address"`
 	Secret  string `yaml:"secret"`
@@ -17,14 +23,14 @@ type ServerConf struct {
 	Timeout string `yaml:"timeout"`
 }
 
-type Conf struct {
-	Admin  []int64    `yaml:"admin"`
-	Server ServerConf `yaml:"server"`
+type Whitelist struct {
+	Private []int64 `yaml:"private"`
+	Group   []int64 `yaml:"group"`
 }
 
 var (
-	config     Conf
-	configLock sync.RWMutex
+	conf     Conf
+	confLock sync.RWMutex
 )
 
 func Load(filePath string) error {
@@ -33,24 +39,24 @@ func Load(filePath string) error {
 		return fmt.Errorf("无法加载配置文件：%w", err)
 	}
 
-	var newConfig Conf
-	err = yaml.Unmarshal(bytes, &newConfig)
+	var newConf Conf
+	err = yaml.Unmarshal(bytes, &newConf)
 	if err != nil {
 		return fmt.Errorf("无法解析配置文件：%w", err)
 	}
 
-	configLock.Lock()
-	config = newConfig
-	configLock.Unlock()
+	confLock.Lock()
+	conf = newConf
+	confLock.Unlock()
 
 	return nil
 }
 
 func Get() Conf {
-	configLock.RLock()
-	defer configLock.RUnlock()
+	confLock.RLock()
+	defer confLock.RUnlock()
 
-	return config
+	return conf
 }
 
 func Reload(filePath string) error {

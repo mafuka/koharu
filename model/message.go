@@ -27,18 +27,19 @@ type Group struct {
 // GroupMember 群成员表
 type GroupMember struct {
 	gorm.Model
-	GroupID int64  `gorm:"primaryKey"` // 群组 ID
-	UserID  int64  `gorm:"primaryKey"` // 用户 ID
-	Card    string ``                  // 群名片
-	Role    Role   ``                  // 成员角色
+	GroupID int64           `gorm:"primaryKey"` // 群组 ID
+	UserID  int64           `gorm:"primaryKey"` // 用户 ID
+	Card    string          ``                  // 群名片
+	Role    GroupMemberRole ``                  // 成员角色
 }
 
-type Role int
+// Role 群成员角色
+type GroupMemberRole int
 
 const (
-	RoleMember Role = iota // 0 群成员
-	RoleAdmin              // 1 群管理员
-	RoleOwner              // 2 群主
+	GroupGeneral GroupMemberRole = iota // 0 普通群成员
+	GroupAdmin                          // 1 群管理员
+	GroupOwner                          // 2 群主
 )
 
 // Message 消息表
@@ -47,7 +48,7 @@ type Message struct {
 	Type      MsgType ``                  // 消息类型
 	UserID    int64   `gorm:"index"`      // 用户 ID
 	GroupID   int64   `gorm:"index"`      // 群组 ID
-	Content   string  ``
+	Content   string  ``                  // 消息内容
 }
 
 // MessageType 消息类型

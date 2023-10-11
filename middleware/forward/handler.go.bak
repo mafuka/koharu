@@ -1,0 +1,208 @@
+package forward
+
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/kwaain/nakisama/lib/api"
+	"github.com/kwaain/nakisama/lib/conf"
+	"github.com/kwaain/nakisama/lib/logger"
+	"github.com/kwaain/nakisama/middleware/event"
+	"go.uber.org/zap"
+)
+
+// Handler 是 forward 主逻辑。
+//
+// 当收到新的请求事件时，Handler 会转发该请求给 bot 管理员。
+// 在转发请求事件时，Handler 会在转发正文的尾部添加一个 SessionID，它包含该请求事件的必要信息。详见 newSessionID()。
+//
+// 当收到新的消息事件时，Handler 会通过 SessionID 判断该消息是否为对于请求事件的响应操作。进而执行该响应操作。
+//
+// 当收到新的通知事件时，Handler 会通过
+func Handler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		requestID := c.MustGet("requestID").(string)
+		logger.Debug("进入中间件 forward", zap.String("requestID", requestID))
+
+		switch e := c.MustGet("event").(type) {
+		// 求事件
+		case event.RequestEvent:
+			switch e.RequestType {
+			case "friend":
+				sessionID := newRequestSessionID(e.RequestType, e.Flag)
+
+				param := api.SendPrivateMsgParam{
+					UserID:  conf.Get().Admin[0],
+					Message: newFriendRequestStr(requestID, sessionID, e.UserID, e.Comment),
+				}
+				resp, err := api.SendPrivateMsg(param)
+				if err != nil {
+					logger.Error("请求事件转发失败", zap.String("requestID", requestID), zap.Error(err))
+
+					c.Abort()
+					return
+				}
+
+				logger.Info("请求事件转发成功", zap.String("requestID", requestID), zap.Float64("messageID", resp.MessageID))
+				c.Abort()
+				return
+
+			case "group":
+
+			default:
+			}
+
+		// 通知事件转发
+		case event.NoticeEvent:
+			switch e.NoticeType {
+			case event.FriendAdd:
+
+			case event.GroupAdmin:
+
+			default:
+			}
+
+		// 如果一条消息是对于请求事件的响应，则会处理
+		case event.MessageEvent:
+			// 是否回复 bot
+			r := regexp.MustCompile(`^\[CQ:reply,id=-?\d+\]\[CQ:at,qq=` + strconv.FormatInt(e.SelfID, 10) + `\]`)
+			if !r.MatchString(e.RawMessage) {
+				c.Next()
+				return
+			}
+
+			// 获取被回复消息
+			getMsgParam := api.GetMsgParam{}
+			getMsgReturn, err := api.GetMsg(getMsgParam)
+			if err != nil {
+				logger.Error("获取被回复消息失败", zap.String("requestID", requestID), zap.Error(err))
+				c.Abort()
+				return
+			}
+
+			// 匹配并获取 SessionID
+			toMatch := getMsgReturn.RawMessage[strings.LastIndex(e.RawMessage, "========================"):]
+			r = regexp.MustCompile(`^========================\nSessionID: (fw-r-[fg].+)\nRequestID: [0-9a-fA-F-]{36}`)
+			matches := r.FindStringSubmatch(toMatch)
+			if len(matches) <= 1 {
+				c.Next()
+				return
+			}
+			sessionID := matches[1]
+
+			// 获取通知类型和原通知 Flag
+			parts := strings.Split(sessionID, "-")
+			if len(parts) < 4 {
+				logger.Error("获取通知类型和原通知 Flag 失败：正则捕获异常", zap.String("requestID", requestID))
+
+				c.Abort()
+				return
+			}
+			noticeType := parts[2]
+			flag := parts[3]
+
+			// 对于 friend 类型请求
+			if noticeType == "f" {
+				// 获取响应操作
+				// A/D/B/S/R/T 里暂时只实现了 A(ccept) 和 D(Deny)
+				r = regexp.MustCompile(`\b([ADBSRT])\b$`)
+				matche := r.FindStringSubmatch(e.RawMessage)
+				if matche == nil {
+					logger.Error("获取响应操作失败：正则无捕获", zap.String("requestID", requestID))
+				}
+				op := matche[1]
+
+				// 执行操作
+				switch op {
+				// Accept
+				case "A":
+					setFriendAddRequestParam := api.SetFriendAddRequestParam{
+						Flag:    flag,
+						Approve: true,
+					}
+					err := api.SetFriendAddRequest(setFriendAddRequestParam)
+					if err != nil {
+						logger.Error("同意好友请求失败", zap.String("requestID", requestID), zap.Error(err))
+						c.Abort()
+						return
+					}
+
+				// Deny
+				case "D":
+					setFriendAddRequestParam := api.SetFriendAddRequestParam{
+						Flag:    flag,
+						Approve: false,
+					}
+					err := api.SetFriendAddRequest(setFriendAddRequestParam)
+					if err != nil {
+						logger.Error("拒绝好友请求失败", zap.String("requestID", requestID), zap.Error(err))
+						c.Abort()
+						return
+					}
+				}
+			}
+
+			// 对于 group 类型请求
+			if noticeType == "g" {
+				// TODO
+			}
+		}
+	}
+}
+
+// newRequestSessionID 用于生成 sessionID。
+//
+// sessionID 用于记录请求状态，方便用户直接回复处理。
+
+// 它由四部分构成，其间用连字符连接：第一部分定值 "fw" 表示中间件
+// forward；第二部分定值 "r" 表示是请求类型事件；第三部分用于区分
+// 请求类型，"f" 代表 friend，"g" 代表 group；第四部分是请求类型
+// 事件自带的 flag 参数，作为请求的唯一 ID。
+func newRequestSessionID(requestType string, flag string) string {
+	switch requestType {
+	case "friend":
+		return "fw-r-f" + flag
+	case "group":
+		return "fw-r-g" + flag
+	default:
+		return ""
+	}
+}
+
+// NewFriendRequestStr 构造出转发新好友申请的消息内容。
+//
+// ℹ️ 收到新的好友请求
+// =========================
+// 【请求者】6025868
+// 【验证信息】加个好友吧加个好友吧加个好友吧加个好友吧
+// =========================
+// ✅【(A)同意】 ❎【(D)拒绝】
+// 🅾️【(B)拉黑】 ⏭️【(S)忽略】
+// 🔄【(R)重现】 ⏺️【(T)调试】
+// =========================
+// Flag: 1696593555000000
+// RequestID: ed6a0822-6e20-4965-ae30-e6357da6c111
+func newFriendRequestStr(requestID string, sessionID string, userID int64, comment string) string {
+	var builder strings.Builder
+	builder.WriteString("ℹ️ 收到新的好友请求\n")
+	builder.WriteString("=========================\n")
+	builder.WriteString(fmt.Sprintf("【请求者】%d\n", userID))
+	if comment != "" {
+		builder.WriteString(fmt.Sprintf("【验证信息】%s\n", comment))
+	}
+	builder.WriteString("=========================\n")
+	builder.WriteString("✅【(A)同意】 ❎【(D)拒绝】\n")
+	builder.WriteString("🅾️【(B)拉黑】 ⏭️【(S)忽略】\n")
+	builder.WriteString("🔄【(R)重现】 ⏺️【(T)调试】\n")
+	builder.WriteString("=========================\n")
+	builder.WriteString(fmt.Sprintf("SessionID: %s\n", sessionID))
+	builder.WriteString(fmt.Sprintf("RequestID: %s\n", requestID))
+
+	return builder.String()
+}
+
+// forwardRequestEvent 转发一个消息事件
+func forwardRequestEvent(event.MessageEvent) error { return nil }

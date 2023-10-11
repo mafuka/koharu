@@ -17,3 +17,13 @@ server:
   version: 11
   # 反向 HTTP 超时时间 (s)
   timeout: 5
+
+# 消息白名单
+whitelist:
+  # 私聊
+  private:
+    - 102938476
+  # 群聊
+  group:
+    - 102938477
+

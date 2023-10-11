@@ -4,17 +4,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kwaain/nakisama/middleware/event"
-	"github.com/kwaain/nakisama/middleware/offtopic"
+	"github.com/kwaain/nakisama/middleware/handler"
 )
 
 func SetupRouter() *gin.Engine {
-	router := gin.Default()
+	r := gin.Default()
 
-	router.Use(event.Handler())
-	router.Use(offtopic.Handler())
+	r.POST("/", func(c *gin.Context) { c.String(http.StatusOK, "/") })
+	r.POST("/hook",
+		handler.Handle(),
+		func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) },
+	)
 
-	router.POST("/", func(c *gin.Context) { c.String(http.StatusOK, "OK") })
-
-	return router
+	return r
 }

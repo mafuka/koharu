@@ -36,13 +36,13 @@ var (
 func Load(filePath string) error {
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return fmt.Errorf("无法加载配置文件：%w", err)
+		return fmt.Errorf("failed to read configuration: %w", err)
 	}
 
 	var newConf Conf
 	err = yaml.Unmarshal(bytes, &newConf)
 	if err != nil {
-		return fmt.Errorf("无法解析配置文件：%w", err)
+		return fmt.Errorf("failed to parse configuration: %w", err)
 	}
 
 	confLock.Lock()
@@ -62,7 +62,7 @@ func Get() Conf {
 func Reload(filePath string) error {
 	err := Load(filePath)
 	if err != nil {
-		return fmt.Errorf("无法重载配置文件：%w", err)
+		return fmt.Errorf("failed to load configuration：%w", err)
 	}
 
 	return nil

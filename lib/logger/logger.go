@@ -75,6 +75,18 @@ func NewLogger(outputPath string) error {
 	return nil
 }
 
+// MustInit initializes a single instance of Logger and panic on failure.
+// Accepts a path as the log file storage directory.
+//
+//	package main
+//	func main() {logger.MustInit("log/")}
+func MustInit(path string) {
+	err := NewLogger(path)
+	if err != nil {
+		panic("Failed to initialize logger" + err.Error())
+	}
+}
+
 func Debug(msg string, fields ...zap.Field) {
 	Log.logger.Debug(msg, fields...)
 }

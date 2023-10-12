@@ -13,24 +13,23 @@ var msgMap = make(map[Type]reflect.Type)
 //	 package main
 //		func main() {msgchain.Register()}
 func Register() {
-	types := []reflect.Type{
-		reflect.TypeOf(Source{}),
-		reflect.TypeOf(Quote{}),
-		reflect.TypeOf(At{}),
-		reflect.TypeOf(AtAll{}),
-		reflect.TypeOf(Face{}),
-		reflect.TypeOf(Plain{}),
-		reflect.TypeOf(Image{}),
-		reflect.TypeOf(FlashImage{}),
-		reflect.TypeOf(Voice{}),
-		reflect.TypeOf(XML{}),
-		reflect.TypeOf(JSON{}),
-		reflect.TypeOf(APP{}),
+	msgs := []Msg{
+		&Source{},
+		&Quote{},
+		&At{},
+		&AtAll{},
+		&Face{},
+		&Plain{},
+		&Image{},
+		&FlashImage{},
+		&Voice{},
+		&XML{},
+		&JSON{},
+		&APP{},
 	}
 
-	for _, t := range types {
-		i := reflect.New(t).Elem()
-		msgType := i.Type().Field(0).Tag.Get("type")
-		msgMap[Type(msgType)] = t
+	for _, m := range msgs {
+		t := m.GetType()
+		msgMap[Type(t)] = reflect.TypeOf(m).Elem()
 	}
 }

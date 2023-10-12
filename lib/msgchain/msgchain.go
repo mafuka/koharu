@@ -1,5 +1,9 @@
 package msgchain
 
+import (
+	"encoding/json"
+)
+
 // MsgChain 消息链
 //
 // 它是由一个个 Msg（消息）组成的数组，是真正意义上的消息。
@@ -7,10 +11,6 @@ type MsgChain []Msg
 
 type Msg interface {
 	GetType() Type
-}
-
-type BaseMsg struct {
-	Type Type `json:"type"`
 }
 
 // Type 消息类型
@@ -86,7 +86,7 @@ type Source struct {
 	Time int `json:"time"` // 时间戳
 }
 
-func (s Source) GetType() Type {
+func (s *Source) GetType() Type {
 	return TypeSource
 }
 
@@ -107,8 +107,30 @@ type Quote struct {
 	Origin MsgChain `json:"origin"`
 }
 
-func (q Quote) GetType() Type {
+func (q *Quote) GetType() Type {
 	return TypeQuote
+}
+
+func (q *Quote) UnmarshalJSON(data []byte) error {
+	type alias Quote
+	t := struct {
+		Origin json.RawMessage `json:"origin"`
+		*alias
+	}{
+		alias: (*alias)(q),
+	}
+
+	if err := json.Unmarshal(data, &t); err != nil {
+		return err
+	}
+
+	c, err := ParseJSON(t.Origin)
+	if err != nil {
+		return err
+	}
+	q.Origin = c
+
+	return nil
 }
 
 // At @某人
@@ -119,7 +141,7 @@ type At struct {
 	Target int `json:"target"`
 }
 
-func (a At) GetType() Type {
+func (a *At) GetType() Type {
 	return TypeAt
 }
 
@@ -128,7 +150,7 @@ type AtAll struct {
 	Type Type `json:"type" type:"AtAll"`
 }
 
-func (a AtAll) GetType() Type {
+func (a *AtAll) GetType() Type {
 	return TypeAtAll
 }
 
@@ -143,7 +165,7 @@ type Face struct {
 	Name string `json:"name,omitempty"`
 }
 
-func (f Face) GetType() Type {
+func (f *Face) GetType() Type {
 	return TypeFace
 }
 
@@ -155,7 +177,7 @@ type Plain struct {
 	Text string `json:"text"`
 }
 
-func (p Plain) GetType() Type {
+func (p *Plain) GetType() Type {
 	return TypePlain
 }
 
@@ -182,7 +204,7 @@ type Image struct {
 	Base64 string `json:"base64"`
 }
 
-func (i Image) GetType() Type {
+func (i *Image) GetType() Type {
 	return TypeImage
 }
 
@@ -207,7 +229,7 @@ type FlashImage struct {
 	Base64 string `json:"base64"`
 }
 
-func (f FlashImage) GetType() Type {
+func (f *FlashImage) GetType() Type {
 	return TypeFlashImage
 }
 
@@ -218,7 +240,7 @@ type Voice struct {
 	URL string `json:"url"`
 }
 
-func (v Voice) GetType() Type {
+func (v *Voice) GetType() Type {
 	return TypeVoice
 }
 
@@ -228,7 +250,7 @@ type XML struct {
 	XML  string `json:"xml"` // XML 文本
 }
 
-func (x XML) GetType() Type {
+func (x *XML) GetType() Type {
 	return TypeXML
 }
 
@@ -238,7 +260,7 @@ type JSON struct {
 	JSON string `json:"json"` // JSON 文本
 }
 
-func (j JSON) GetType() Type {
+func (j *JSON) GetType() Type {
 	return TypeJSON
 }
 
@@ -248,6 +270,6 @@ type APP struct {
 	Content string `json:"content"` // 内容
 }
 
-func (a APP) GetType() Type {
+func (a *APP) GetType() Type {
 	return TypeAPP
 }

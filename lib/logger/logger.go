@@ -39,7 +39,7 @@ func NewLogger(outputPath string) error {
 		MessageKey: "msg",
 		// FunctionKey:   "func",
 		StacktraceKey: "stacktrace",
-		EncodeLevel:   zapcore.CapitalLevelEncoder,
+		EncodeLevel:   zapcore.CapitalColorLevelEncoder,
 		EncodeTime:    zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.000"),
 		EncodeCaller: func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
 			enc.AppendString(fmt.Sprintf("%s:%d", filepath.Base(caller.File), caller.Line))

@@ -13,52 +13,53 @@ import (
 // Valid data will be parsed into corresponding types of structs.
 func Handle() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var k = 0
-
 		// Trace
 		t := tracer.NewTrace().ToContext(c)
 		s := t.StartSpan()
 
 		// Receive event
-		e, _, err := recvEvent(c, s)
+		e, err := recvEvent(c, s)
 		if err != nil {
-			logger.Error("Failed to receive event", zap.Error(err))
-			k++
+			logger.Error("Failed to receive event",
+				zap.String("traceID", t.ID),
+				zap.String("spanID", s.ID),
+				zap.Error(err))
+			t.EndSpan(s)
+			c.Abort()
+			return
 		}
 		logger.Info("New event received",
+			zap.String("traceID", t.ID),
 			zap.String("spanID", s.ID),
 			zap.Any("event", e),
 		)
 
-		// Quit
-		t.EndSpan(s)
-		if k > 0 {
-			c.Abort()
-			return
-		}
+		// Save
+
 		c.Next()
 	}
 }
 
 // recvEvent parses the event data and returns the event structure.
-func recvEvent(c *gin.Context, s *tracer.Span) (interface{}, event.Type, error) {
+func recvEvent(c *gin.Context, s *tracer.Span) (interface{}, error) {
 	r, err := c.GetRawData()
 	if err != nil {
 		logger.Error("Failed to get raw JSON data",
+
 			zap.String("spanID", s.ID),
 			zap.Error(err),
 		)
-		return nil, "", err
+		return nil, err
 	}
 
-	e, et, err := event.ParseJSON(r)
+	e, err := event.ParseJSON(r)
 	if err != nil {
 		logger.Error("Failed to parse event data",
 			zap.String("spanID", s.ID),
 			zap.Error(err),
 		)
-		return nil, "", err
+		return nil, err
 	}
 
-	return e, et, nil
+	return e, nil
 }

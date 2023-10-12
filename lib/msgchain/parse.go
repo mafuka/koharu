@@ -18,30 +18,34 @@ import (
 //		msgchain.ParseJSON()
 //	}
 func ParseJSON(data []byte) (MsgChain, error) {
-	var r []json.RawMessage
-	if err := json.Unmarshal(data, &r); err != nil {
+	var rawChain []json.RawMessage
+	if err := json.Unmarshal(data, &rawChain); err != nil {
 		return nil, err
 	}
 
-	var mc MsgChain
-	for _, rawMessage := range r {
-		var baseMsg BaseMsg
-		if err := json.Unmarshal(rawMessage, &baseMsg); err != nil {
+	var chain MsgChain
+	for _, rawMsg := range rawChain {
+		temp := struct {
+			Type Type `json:"type"`
+		}{}
+
+		if err := json.Unmarshal(rawMsg, &temp); err != nil {
 			return nil, err
 		}
 
-		msgType, ok := msgMap[baseMsg.Type]
+		t, ok := msgMap[temp.Type]
 		if !ok {
-			return nil, fmt.Errorf("unknown message type: %s", baseMsg.Type)
+			return nil, fmt.Errorf("unknown message type: %s", temp.Type)
 		}
 
-		msg := reflect.New(msgType).Interface().(Msg)
-		if err := json.Unmarshal(rawMessage, msg); err != nil {
+		msg := reflect.New(t).Interface().(Msg)
+
+		if err := json.Unmarshal(rawMsg, msg); err != nil {
 			return nil, err
 		}
 
-		mc = append(mc, msg)
+		chain = append(chain, msg)
 	}
 
-	return mc, nil
+	return chain, nil
 }

@@ -9,10 +9,8 @@ package event
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"reflect"
-
-	"github.com/kwaain/nakisama/lib/msgchain"
 )
 
 // ParseJSON accepts a JSON stream of events come from Mirai's hook reporting,
@@ -27,32 +25,25 @@ import (
 //		r, _ := c.GetRawData()
 //		event.ParseJSON(r)
 //	}
-func ParseJSON(data []byte) (interface{}, Type, error) {
-	var e BaseEvent
-	if err := json.Unmarshal(data, &e); err != nil {
-		return nil, "", err
+func ParseJSON(data []byte) (interface{}, error) {
+	temp := struct {
+		Type Type `json:"type"`
+	}{}
+
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return nil, err
 	}
 
-	t, exists := eventMap[e.Type]
-	if !exists {
-		return nil, "", errors.New("unknown event type")
+	t, ok := eventMap[temp.Type]
+	if !ok {
+		return nil, fmt.Errorf("unknown event type: %s", temp.Type)
 	}
 
 	ptr := reflect.New(t).Interface()
 
 	if err := json.Unmarshal(data, ptr); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	// Parses the MsgChain field if available
-	mptr, ok := ptr.(MsgEvent)
-	if ok {
-		mc, err := msgchain.ParseJSON(mptr.GetRawMsgChain())
-		if err != nil {
-			return nil, "", err
-		}
-		mptr.SetMsgChain(mc)
-	}
-
-	return ptr, e.Type, nil
+	return ptr, nil
 }

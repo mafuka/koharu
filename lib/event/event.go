@@ -6,6 +6,10 @@ import (
 	"github.com/kwaain/nakisama/lib/msgchain"
 )
 
+type Event interface {
+	GetType() Type
+}
+
 // Type represents the event type.
 //
 // From now on, Type exists only to ensure type safety.
@@ -178,21 +182,6 @@ const (
 	TypeCommandExecutedEvent Type = "CommandExecutedEvent"
 )
 
-// Event has only one Type field for type matching.
-// The final parsed event should be in the below type-specific structure .
-type Event interface {
-	GetType() Type
-}
-
-type BaseEvent struct {
-	Type Type `json:"type"`
-}
-
-type MsgEvent interface {
-	GetRawMsgChain() json.RawMessage
-	SetMsgChain(msgchain.MsgChain)
-}
-
 /*********** COMMON TYPE ************/
 /* Common types are offen reused in event types. */
 
@@ -282,110 +271,175 @@ type OtherClient struct {
 type FriendMsg struct {
 	Type Type `json:"type" type:"FriendMessage"`
 
-	RawMsgChain json.RawMessage `json:"messageChain"`
-	MsgChain    msgchain.MsgChain
-
 	Sender Friend `json:"sender"`
+
+	MsgChain msgchain.MsgChain `json:"messageChain"`
 }
 
 func (f *FriendMsg) GetType() Type {
 	return TypeFriendMsg
 }
 
-func (f *FriendMsg) GetRawMsgChain() json.RawMessage {
-	return f.RawMsgChain
-}
+func (f *FriendMsg) UnmarshalJSON(data []byte) error {
+	type alias FriendMsg // alias
+	t := struct {
+		MsgChain json.RawMessage `json:"messageChain"`
+		*alias
+	}{
+		alias: (*alias)(f),
+	}
 
-func (f *FriendMsg) SetMsgChain(mc msgchain.MsgChain) {
-	f.MsgChain = mc
+	if err := json.Unmarshal(data, &t); err != nil {
+		return err
+	}
+
+	c, err := msgchain.ParseJSON(t.MsgChain)
+	if err != nil {
+		return nil
+	}
+	f.MsgChain = c
+
+	return nil
 }
 
 // GroupMsg represents a message from a group.
 type GroupMsg struct {
 	Type Type `json:"type" type:"GroupMessage"`
 
-	RawMsgChain json.RawMessage `json:"messageChain"`
-	MsgChain    msgchain.MsgChain
-
 	Sender GroupMember `json:"sender"`
+
+	MsgChain msgchain.MsgChain `json:"messageChain"`
 }
 
-func (g *Group) GetType() Type {
+func (g *GroupMsg) GetType() Type {
 	return TypeGroupMsg
 }
 
-func (g *GroupMsg) GetRawMsgChain() json.RawMessage {
-	return g.RawMsgChain
-}
+func (g *GroupMsg) UnmarshalJSON(data []byte) error {
+	type alias GroupMsg // alias
+	t := struct {
+		MsgChain json.RawMessage `json:"messageChain"`
+		*alias
+	}{
+		alias: (*alias)(g),
+	}
 
-func (g *GroupMsg) SetMsgChain(mc msgchain.MsgChain) {
-	g.MsgChain = mc
+	if err := json.Unmarshal(data, &t); err != nil {
+		return err
+	}
+
+	c, err := msgchain.ParseJSON(t.MsgChain)
+	if err != nil {
+		return nil
+	}
+	g.MsgChain = c
+
+	return nil
 }
 
 // TempMsg represents a temporary message in a group.
 type TempMsg struct {
 	Type Type `json:"type" type:"TempMessage"`
 
-	RawMsgChain json.RawMessage `json:"messageChain"`
-	MsgChain    msgchain.MsgChain
-
 	Sender GroupMember `json:"sender"`
+
+	MsgChain msgchain.MsgChain `json:"messageChain"`
 }
 
 func (t *TempMsg) GetType() Type {
 	return TypeTempMsg
 }
 
-func (t *TempMsg) GetRawMsgChain() json.RawMessage {
-	return t.RawMsgChain
-}
+func (t *TempMsg) UnmarshalJSON(data []byte) error {
+	type alias TempMsg // alias
+	temp := struct {
+		MsgChain json.RawMessage `json:"messageChain"`
+		*alias
+	}{
+		alias: (*alias)(t),
+	}
 
-func (t *TempMsg) SetMsgChain(mc msgchain.MsgChain) {
-	t.MsgChain = mc
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	c, err := msgchain.ParseJSON(temp.MsgChain)
+	if err != nil {
+		return nil
+	}
+	t.MsgChain = c
+
+	return nil
 }
 
 // StrangerMsg represents a message from a stranger.
 type StrangerMsg struct {
 	Type Type `json:"type" type:"StrangerMessage"`
 
-	RawMsgChain json.RawMessage `json:"messageChain"`
-	MsgChain    msgchain.MsgChain
-
 	Sender Stranger `json:"sender"`
+
+	MsgChain msgchain.MsgChain `json:"messageChain"`
 }
 
 func (s *StrangerMsg) GetType() Type {
 	return TypeStrangerMsg
 }
 
-func (s *StrangerMsg) GetRawMsgChain() json.RawMessage {
-	return s.RawMsgChain
-}
+func (s *StrangerMsg) UnmarshalJSON(data []byte) error {
+	type alias StrangerMsg // alias
+	temp := struct {
+		MsgChain json.RawMessage `json:"messageChain"`
+		*alias
+	}{
+		alias: (*alias)(s),
+	}
 
-func (s *StrangerMsg) SetMsgChain(mc msgchain.MsgChain) {
-	s.MsgChain = mc
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	c, err := msgchain.ParseJSON(temp.MsgChain)
+	if err != nil {
+		return nil
+	}
+	s.MsgChain = c
+
+	return nil
 }
 
 // OtherClientMsg represents a message from another client.
 type OtherClientMsg struct {
 	Type Type `json:"type" type:"OtherClientMessage"`
 
-	RawMsgChain json.RawMessage `json:"messageChain"`
-	MsgChain    msgchain.MsgChain
-
 	Sender OtherClient `json:"sender"`
+
+	MsgChain msgchain.MsgChain `json:"messageChain"`
 }
 
 func (o *OtherClientMsg) GetType() Type {
 	return TypeOtherClientMsg
 }
 
-func (o *OtherClientMsg) GetRawMsgChain() json.RawMessage {
-	return o.RawMsgChain
-}
+func (o *OtherClientMsg) UnmarshalJSON(data []byte) error {
+	type alias OtherClientMsg // alias
+	temp := struct {
+		MsgChain json.RawMessage `json:"messageChain"`
+		*alias
+	}{
+		alias: (*alias)(o),
+	}
 
-func (o *OtherClientMsg) SetMsgChain(mc msgchain.MsgChain) {
-	o.MsgChain = mc
+	if err := json.Unmarshal(data, &o); err != nil {
+		return err
+	}
+
+	c, err := msgchain.ParseJSON(temp.MsgChain)
+	if err != nil {
+		return nil
+	}
+	o.MsgChain = c
+
+	return nil
 }
 
 /******* SYNCHRONIZED MESSAGE *******/
@@ -397,94 +451,145 @@ func (o *OtherClientMsg) SetMsgChain(mc msgchain.MsgChain) {
 type FriendSyncMsg struct {
 	Type Type `json:"type" type:"FriendSyncMessage"`
 
-	RawMsgChain json.RawMessage `json:"messageChain"`
-	MsgChain    msgchain.MsgChain
-
 	// Subject is the target friend for sending.
 	Subject Friend `json:"subject"`
+
+	MsgChain msgchain.MsgChain `json:"messageChain"`
 }
 
 func (f *FriendSyncMsg) GetType() Type {
 	return TypeFriendSyncMsg
 }
 
-func (f *FriendSyncMsg) GetRawMsgChain() json.RawMessage {
-	return f.RawMsgChain
-}
+func (f *FriendSyncMsg) UnmarshalJSON(data []byte) error {
+	type alias FriendSyncMsg // alias
+	temp := struct {
+		MsgChain json.RawMessage `json:"messageChain"`
+		*alias
+	}{
+		alias: (*alias)(f),
+	}
 
-func (f *FriendSyncMsg) SetMsgChain(mc msgchain.MsgChain) {
-	f.MsgChain = mc
+	if err := json.Unmarshal(data, &f); err != nil {
+		return err
+	}
+
+	c, err := msgchain.ParseJSON(temp.MsgChain)
+	if err != nil {
+		return nil
+	}
+	f.MsgChain = c
+
+	return nil
 }
 
 // GroupSyncMsg is synchronized GroupMsg.
 type GroupSyncMsg struct {
 	Type Type `json:"type" type:"GroupSyncMessage"`
 
-	RawMsgChain json.RawMessage `json:"messageChain"`
-	MsgChain    msgchain.MsgChain
-
 	// Subject is the target group for sending.
 	Subject Group `json:"subject"`
+
+	MsgChain msgchain.MsgChain `json:"messageChain"`
 }
 
 func (g *GroupSyncMsg) GetType() Type {
 	return TypeGroupSyncMsg
 }
 
-func (g *GroupSyncMsg) GetRawMsgChain() json.RawMessage {
-	return g.RawMsgChain
-}
+func (g *GroupSyncMsg) UnmarshalJSON(data []byte) error {
+	type alias GroupSyncMsg // alias
+	temp := struct {
+		MsgChain json.RawMessage `json:"messageChain"`
+		*alias
+	}{
+		alias: (*alias)(g),
+	}
 
-func (g *GroupSyncMsg) SetMsgChain(mc msgchain.MsgChain) {
-	g.MsgChain = mc
+	if err := json.Unmarshal(data, &g); err != nil {
+		return err
+	}
+
+	c, err := msgchain.ParseJSON(temp.MsgChain)
+	if err != nil {
+		return nil
+	}
+	g.MsgChain = c
+
+	return nil
 }
 
 // TempSyncMsg is synchronized TempMsg.
 type TempSyncMsg struct {
 	Type Type `json:"type" type:"TempSyncMessage"`
 
-	RawMsgChain json.RawMessage `json:"messageChain"`
-
 	// Subject is the target group member,
 	// the corresponding group information is in the Group field of the group member.
 	Subject GroupMember `json:"subject"`
 
-	MsgChain msgchain.MsgChain
+	MsgChain msgchain.MsgChain `json:"messageChain"`
 }
 
 func (t *TempSyncMsg) GetType() Type {
 	return TypeTempSyncMsg
 }
 
-func (t *TempSyncMsg) GetRawMsgChain() json.RawMessage {
-	return t.RawMsgChain
-}
+func (t *TempSyncMsg) UnmarshalJSON(data []byte) error {
+	type alias TempSyncMsg // alias
+	temp := struct {
+		MsgChain json.RawMessage `json:"messageChain"`
+		*alias
+	}{
+		alias: (*alias)(t),
+	}
 
-func (t *TempSyncMsg) SetMsgChain(mc msgchain.MsgChain) {
-	t.MsgChain = mc
+	if err := json.Unmarshal(data, &t); err != nil {
+		return err
+	}
+
+	c, err := msgchain.ParseJSON(temp.MsgChain)
+	if err != nil {
+		return nil
+	}
+	t.MsgChain = c
+
+	return nil
 }
 
 // StrangerSyncMsg is synchronized StrangerMsg.
 type StrangerSyncMsg struct {
 	Type Type `json:"type" type:"StrangerSyncMessage"`
 
-	RawMsgChain json.RawMessage `json:"messageChain"`
-	MsgChain    msgchain.MsgChain
-
 	// Subject is the current stranger's account to which the message was sent.
 	Subject Stranger `json:"subject"`
+
+	MsgChain msgchain.MsgChain `json:"messageChain"`
 }
 
 func (s *StrangerSyncMsg) GetType() Type {
 	return TypeStrangerSyncMsg
 }
 
-func (s *StrangerSyncMsg) GetRawMsgChain() json.RawMessage {
-	return s.RawMsgChain
-}
+func (s *StrangerSyncMsg) UnmarshalJSON(data []byte) error {
+	type alias StrangerSyncMsg // alias
+	temp := struct {
+		MsgChain json.RawMessage `json:"messageChain"`
+		*alias
+	}{
+		alias: (*alias)(s),
+	}
 
-func (s *StrangerSyncMsg) SetMsgChain(mc msgchain.MsgChain) {
-	s.MsgChain = mc
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	c, err := msgchain.ParseJSON(temp.MsgChain)
+	if err != nil {
+		return nil
+	}
+	s.MsgChain = c
+
+	return nil
 }
 
 /********** BOT SELF EVENT **********/

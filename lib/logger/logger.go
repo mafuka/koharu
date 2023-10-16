@@ -91,20 +91,45 @@ func Debug(msg string, fields ...zap.Field) {
 	Log.logger.Debug(msg, fields...)
 }
 
+func DebugT(msg string, traceID string, fields ...zap.Field) {
+	fields = append(fields, zap.String("traceID", traceID))
+	Debug(msg, fields...)
+}
+
 func Info(msg string, fields ...zap.Field) {
 	Log.logger.Info(msg, fields...)
+}
+
+func InfoT(msg string, traceID string, fields ...zap.Field) {
+	fields = append(fields, zap.String("traceID", traceID))
+	Info(msg, fields...)
 }
 
 func Warn(msg string, fields ...zap.Field) {
 	Log.logger.Warn(msg, fields...)
 }
 
+func WarnT(msg string, traceID string, fields ...zap.Field) {
+	fields = append(fields, zap.String("traceID", traceID))
+	Warn(msg, fields...)
+}
+
 func Error(msg string, fields ...zap.Field) {
 	Log.logger.Error(msg, fields...)
 }
 
+func ErrorT(msg string, traceID string, fields ...zap.Field) {
+	fields = append(fields, zap.String("traceID", traceID))
+	Error(msg, fields...)
+}
+
 func Fatal(msg string, fields ...zap.Field) {
 	Log.logger.Fatal(msg, fields...)
+}
+
+func FatalT(msg string, traceID string, fields ...zap.Field) {
+	fields = append(fields, zap.String("traceID", traceID))
+	Fatal(msg, fields...)
 }
 
 func Close() error {

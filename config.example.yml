@@ -3,14 +3,14 @@
 #
 # 管理员列表
 admin:
-  - 230902234916
+  - 0
 
 # 通信配置
 server:
   # HTTP 监听地址
   address: 127.0.0.1:5701
   # 通信密钥
-  secret: ''
+  secret: ""
   # 反向 POST 地址
   post: http://127.0.0.1:5700
   # OneBot 协议版本
@@ -21,9 +21,8 @@ server:
 # 消息白名单
 whitelist:
   # 私聊
-  private:
-    - 102938476
+  friend:
+    - 0
   # 群聊
   group:
-    - 102938477
-
+    - 0

@@ -24,8 +24,8 @@ type ServerConf struct {
 }
 
 type Whitelist struct {
-	Private []int64 `yaml:"private"`
-	Group   []int64 `yaml:"group"`
+	Friend []int64 `yaml:"friend"`
+	Group  []int64 `yaml:"group"`
 }
 
 var (

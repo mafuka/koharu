@@ -1,5 +1,4 @@
-// logger 包提供了日志记录功能，基于 zap 实现。支持同时输出到控制台和文件，
-// 文件按日期分割，日志格式为 JSON 格式。
+// Package logger offers structured logging with file rotation based on date using zap.
 package logger
 
 import (
@@ -13,19 +12,22 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// DateFileWriter handles daily log file rotation.
 type DateFileWriter struct {
 	sync.Mutex
 	logDir      string
 	currentFile *os.File
 }
 
-// Global Logger
+// Log is a singleton instance for application-wide logging.
 var Log *Logger
 
+// Logger wraps zap's SugaredLogger for convenience.
 type Logger struct {
-	logger *zap.Logger
+	sugaredLogger *zap.SugaredLogger
 }
 
+// NewLogger configures and instantiates a Logger with file and console outputs.
 func NewLogger(outputPath string) error {
 	writer, err := NewDateFileWriter(filepath.Dir(outputPath))
 	if err != nil {
@@ -64,78 +66,21 @@ func NewLogger(outputPath string) error {
 	fileCore := zapcore.NewCore(fileEncoder, fileOutput, fileLevel)
 
 	// Create the logger with the async core
-	logger := zap.New(
+	baseLogger := zap.New(
 		zapcore.NewTee(consoleCore, fileCore),
 		zap.AddCaller(),
 		zap.AddCallerSkip(1),
 	)
 
+	// Create a sugared logger
+	sugaredLogger := baseLogger.Sugar()
+
 	// Global Logger
-	Log = &Logger{logger: logger}
+	Log = &Logger{sugaredLogger: sugaredLogger}
 	return nil
 }
 
-// MustInit initializes a single instance of Logger and panic on failure.
-// Accepts a path as the log file storage directory.
-//
-//	package main
-//	func main() {logger.MustInit("log/")}
-func MustInit(path string) {
-	err := NewLogger(path)
-	if err != nil {
-		panic("Failed to initialize logger" + err.Error())
-	}
-}
-
-func Debug(msg string, fields ...zap.Field) {
-	Log.logger.Debug(msg, fields...)
-}
-
-func DebugT(msg string, traceID string, fields ...zap.Field) {
-	fields = append(fields, zap.String("traceID", traceID))
-	Debug(msg, fields...)
-}
-
-func Info(msg string, fields ...zap.Field) {
-	Log.logger.Info(msg, fields...)
-}
-
-func InfoT(msg string, traceID string, fields ...zap.Field) {
-	fields = append(fields, zap.String("traceID", traceID))
-	Info(msg, fields...)
-}
-
-func Warn(msg string, fields ...zap.Field) {
-	Log.logger.Warn(msg, fields...)
-}
-
-func WarnT(msg string, traceID string, fields ...zap.Field) {
-	fields = append(fields, zap.String("traceID", traceID))
-	Warn(msg, fields...)
-}
-
-func Error(msg string, fields ...zap.Field) {
-	Log.logger.Error(msg, fields...)
-}
-
-func ErrorT(msg string, traceID string, fields ...zap.Field) {
-	fields = append(fields, zap.String("traceID", traceID))
-	Error(msg, fields...)
-}
-
-func Fatal(msg string, fields ...zap.Field) {
-	Log.logger.Fatal(msg, fields...)
-}
-
-func FatalT(msg string, traceID string, fields ...zap.Field) {
-	fields = append(fields, zap.String("traceID", traceID))
-	Fatal(msg, fields...)
-}
-
-func Close() error {
-	return Log.logger.Sync()
-}
-
+// NewDateFileWriter prepares a directory for log files and initializes a writer.
 func NewDateFileWriter(logDir string) (*DateFileWriter, error) {
 	if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
 		return nil, err
@@ -152,6 +97,7 @@ func NewDateFileWriter(logDir string) (*DateFileWriter, error) {
 	return writer, nil
 }
 
+// Write outputs log entries to the current file, rotating if necessary.
 func (w *DateFileWriter) Write(p []byte) (n int, err error) {
 	w.Lock()
 	defer w.Unlock()
@@ -173,10 +119,12 @@ func (w *DateFileWriter) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
+// Sync flushes the current log file to disk.
 func (w *DateFileWriter) Sync() error {
 	return w.currentFile.Sync()
 }
 
+// checkDateChange handles the rotation of the log file if the date has changed.
 func (w *DateFileWriter) checkDateChange() error {
 	now := time.Now()
 	date := now.Format("2006-01-02")
@@ -193,6 +141,7 @@ func (w *DateFileWriter) checkDateChange() error {
 	return nil
 }
 
+// openNewFile opens a new log file based on the current date.
 func (w *DateFileWriter) openNewFile() error {
 	now := time.Now()
 	date := now.Format("2006-01-02")
@@ -210,4 +159,42 @@ func (w *DateFileWriter) openNewFile() error {
 	w.currentFile = file
 
 	return nil
+}
+
+// MustInit is a convenience function to initialize logging and panic on error.
+func MustInit(path string) {
+	err := NewLogger(path)
+	if err != nil {
+		panic("Failed to initialize logger" + err.Error())
+	}
+}
+
+// Debug logs a formatted debug message.
+func Debug(template string, args ...interface{}) {
+	Log.sugaredLogger.Debugf(template, args...)
+}
+
+// Info logs a formatted informational message.
+func Info(template string, args ...interface{}) {
+	Log.sugaredLogger.Infof(template, args...)
+}
+
+// Warn logs a formatted warning message.
+func Warn(template string, args ...interface{}) {
+	Log.sugaredLogger.Warnf(template, args...)
+}
+
+// Error logs a formatted error message.
+func Error(template string, args ...interface{}) {
+	Log.sugaredLogger.Errorf(template, args...)
+}
+
+// Fatal logs a formatted fatal message and terminates the application.
+func Fatal(template string, args ...interface{}) {
+	Log.sugaredLogger.Fatalf(template, args...)
+}
+
+// Close flushes any buffered log entries.
+func Close() error {
+	return Log.sugaredLogger.Sync()
 }

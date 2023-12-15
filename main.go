@@ -1,100 +1,53 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
-	"github.com/kwaain/nakisama/lib/conf"
-	"github.com/kwaain/nakisama/lib/event"
-	"github.com/kwaain/nakisama/lib/logger"
-	"github.com/kwaain/nakisama/lib/msgchain"
-	"github.com/kwaain/nakisama/router"
-	"go.uber.org/zap"
+	"github.com/mafuka/koharu/core"
+	"strings"
 )
 
 const LOGO = `
-	
-██╗  ██╗██╗       ███╗   ██╗ █████╗ ██╗  ██╗██╗██╗
-██║  ██║██║       ████╗  ██║██╔══██╗██║ ██╔╝██║██║
-███████║██║       ██╔██╗ ██║███████║█████╔╝ ██║██║
-██╔══██║██║       ██║╚██╗██║██╔══██║██╔═██╗ ██║╚═╝
-██║  ██║██║▄█╗    ██║ ╚████║██║  ██║██║  ██╗██║██╗
-╚═╝  ╚═╝╚═╝╚═╝    ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝                          
+/\_/\  /\_/\  /\_/\  /\_/\  /\_/\  /\_/\  /\_/\  /\_/\  /\_/\  /\_/\ 
+( o.o )( o.o )( o.o )( o.o )( o.o )( o.o )( o.o )( o.o )( o.o )( o.o )
+ > ^ <  > ^ <  > ^ <  > ^ <  > ^ <  > ^ <  > ^ <  > ^ <  > ^ <  > ^ < 
+ /\_/\    ██╗  ██╗ ██████╗ ██╗  ██╗ █████╗ ██████╗ ██╗   ██╗    /\_/\ 
+( o.o )   ██║ ██╔╝██╔═══██╗██║  ██║██╔══██╗██╔══██╗██║   ██║   ( o.o )
+ > ^ <    █████╔╝ ██║   ██║███████║███████║██████╔╝██║   ██║    > ^ < 
+ /\_/\    ██╔═██╗ ██║   ██║██╔══██║██╔══██║██╔══██╗██║   ██║    /\_/\ 
+( o.o )   ██║  ██╗╚██████╔╝██║  ██║██║  ██║██║  ██║╚██████╔╝   ( o.o )
+ > ^ <    ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝     > ^ < 
+ /\_/\  /\_/\  /\_/\  /\_/\  /\_/\  /\_/\  /\_/\  /\_/\  /\_/\  /\_/\ 
+( o.o )( o.o )( o.o )( o.o )( o.o )( o.o )( o.o )( o.o )( o.o )( o.o )
+ > ^ <  > ^ <  > ^ <  > ^ <  > ^ <  > ^ <  > ^ <  > ^ <  > ^ <  > ^ <      
 `
 
+const (
+	projectName = "Koharu"
+	version     = "2.3.3"
+	commit      = "114514a"
+	buildDate   = "1997"
+	repoURL     = "https://github.com/mafuka/koharu"
+)
+
+const (
+	cfgFile = "config.yml"
+)
+
+func printBrand() {
+	fmt.Printf("[i] %s %s (%s %s)\n", projectName, version, commit, buildDate)
+	fmt.Printf("[i] %s\n", repoURL)
+	fmt.Printf("[i] This program is licensed under MIT.\n")
+	// keeping line breaks within LOGO to maintain aesthetics
+	fmt.Print(strings.TrimPrefix(LOGO, "\n"))
+}
+
 func main() {
-	var err error
+	printBrand()
 
-	// Logger
-	logger.MustInit("log/")
-	logger.Info("(1/6) Initialized logger")
-
-	// Config
-	err = conf.Load("config.yml")
+	bot := core.New(core.WithConfig(core.DefaultConfig()))
+	//bot.Use()
+	err := bot.Run()
 	if err != nil {
-		logger.Error("Failed to load configuration", zap.Error(err))
-		panic(err.Error())
+		panic(err)
 	}
-	logger.Info("(2/6) Configuration loaded")
-
-	// Message types
-	msgchain.Register()
-	logger.Info("(3/6) Message types registered")
-
-	// Events
-	event.Register()
-	logger.Info("(4/6) Events registered")
-
-	// Router
-	router := router.SetupRouter()
-	logger.Info("(5/6) Router loaded")
-
-	// Server
-	srv := &http.Server{
-		Addr:    conf.Get().Server.Address,
-		Handler: router,
-	}
-
-	started := make(chan struct{})
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		close(started)
-
-		err := srv.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("Server startup failed", zap.Error(err))
-			panic(err.Error())
-		}
-
-	}()
-
-	<-started
-	logger.Info("(6/6) Gin engine loaded")
-
-	logger.Info(LOGO)
-	logger.Info("Server is ready!")
-
-	// Gracefully shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	<-quit
-	fmt.Print("\n") // Separate "^C" and next logs
-	logger.Info("Shutting down the server...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err = srv.Shutdown(ctx)
-	if err != nil {
-		logger.Error("Server forced shutdown", zap.Error(err))
-	}
-
-	logger.Info("Server shutdown gracefully")
 }

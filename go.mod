@@ -3,6 +3,7 @@ module github.com/mafuka/koharu
 go 1.21.0
 
 require (
+	github.com/gin-contrib/pprof v1.4.0
 	github.com/gin-gonic/gin v1.9.1
 	go.uber.org/zap v1.26.0
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028
@@ -38,6 +39,5 @@ require (
 	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -2,7 +2,6 @@ package core
 
 // Config holds all configurations for the Bot.
 type Config struct {
-	isDefault bool
 	Admin     []int           `yaml:"admin"`     // Administrator list
 	Log       LoggerConfig    `yaml:"log"`       // Logger settings
 	Server    ServerConfig    `yaml:"server"`    // Server settings
@@ -12,7 +11,6 @@ type Config struct {
 // DefaultConfig creates a new Config with default settings.
 func DefaultConfig() *Config {
 	return &Config{
-		isDefault: true,
 		Admin:     []int{},
 		Log:       DefaultLoggerConfig(),
 		Server:    DefaultServerConfig(),

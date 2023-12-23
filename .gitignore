@@ -35,9 +35,7 @@ go.work
 *.vsix
 
 # Files of the development environment
-config.yml
-go-cqhttp/
-log/
-tmp/
-
 .DS_Store
+config.yml
+*.log
+_tmp/

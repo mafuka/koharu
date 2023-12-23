@@ -19,12 +19,12 @@ func Rx() Middleware {
 		c.Event = e
 
 		switch e := e.(type) {
-		case *FriendMsg:
-			Log().Info("[Friend] %s(%d): %v", e.Sender.Nickname, e.Sender.ID, e.Msg)
-		case *GroupMsg:
-			Log().Info("[Group] [%s(%d)] %s(%d): %+v", e.Sender.Group.Name, e.Sender.Group.ID, e.Sender.MemberName, e.Sender.ID, e.Msg)
+		case *FriendMessage:
+			Log().Info("[Friend] %s(%d): %v", e.Sender.Nickname, e.Sender.ID, e.MessageChain)
+		case *GroupMessage:
+			Log().Info("[Group] [%s(%d)] %s(%d): %+v", e.Sender.Group.Name, e.Sender.Group.ID, e.Sender.MemberName, e.Sender.ID, e.MessageChain)
 		default:
-			Log().Info("[%s]", e.(Event).GetType())
+			Log().Info("[%s]", e.(Event).EventType())
 		}
 
 		c.Next()

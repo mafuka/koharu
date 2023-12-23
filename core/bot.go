@@ -1,9 +1,18 @@
 package core
 
+import (
+	"github.com/gin-contrib/pprof"
+)
+
 // Bot represents a QQ bot.
 type Bot struct {
 	*Config
 	*Server
+
+	Middlewares []Middleware
+
+	withConfig bool
+	withPProf  bool
 }
 
 // Option defines a function type for Bot options.
@@ -11,20 +20,24 @@ type Option func(*Bot)
 
 // New initializes a new Bot instance with given options.
 func New(options ...Option) *Bot {
-	b := &Bot{}
-	b.Config = DefaultConfig()
+	b := &Bot{
+		Config:      DefaultConfig(),
+		Server:      DefaultServer(),
+		Middlewares: []Middleware{Rx()},
+		withConfig:  false,
+		withPProf:   false,
+	}
+
+	RegisterLogger(b.Config.Log)
+	//RegisterEvent()
+	//RegisterMsgElem()
 
 	// apply any provided options
 	for _, option := range options {
 		option(b)
 	}
 
-	RegisterLogger(b.Config.Log)
-
-	RegisterEvent()
-	RegisterMsgElem()
-
-	if b.Config.isDefault {
+	if !b.withConfig {
 		Log().Warn("Using the default configuration, some settings may not meet your expectations!")
 	}
 	if b.Config.Log.File == "console" {
@@ -40,31 +53,39 @@ func New(options ...Option) *Bot {
 		Log().Warn("No whitelist set! Brace for impact, every message is now in play.")
 	}
 
-	b.Server = NewServer(b.Config.Server)
-
-	b.Server.POST("/hook", Middlewares...)
-
 	return b
 }
 
 // WithConfig is an option to set or override the configuration for the Bot.
 func WithConfig(cfg *Config) Option {
 	return func(b *Bot) {
-		cfg.isDefault = false
+		b.withConfig = true
 		b.Config = cfg
+		b.Server = NewServer(cfg.Server)
 	}
 }
 
-var Middlewares = []Middleware{Rx()}
+// WithPProf is a bot option to enable PProf.
+func WithPProf() Option {
+	return func(b *Bot) {
+		b.withPProf = true
+		pprof.Register(b.Engine)
+	}
+}
 
 func (b *Bot) Use(m Middleware) {
-	Middlewares = append(Middlewares, m)
+	b.Middlewares = append(b.Middlewares, m)
 }
 
 // Run starts the Bot.Server.
 func (b *Bot) Run() error {
-	Log().Info("Bot is listening for events on http://%s/hook.", b.Config.Server.Address)
-	Log().Info("Bot will report behavior to http://%s.", b.Config.Server.Post)
+	b.setupHook()
+
+	Log().Info("Bot is listening for events on http://%s/hook.", b.httpServer.Addr)
+	Log().Info("Bot will report behavior to %s.", b.Config.Server.Post)
+	if b.withPProf {
+		Log().Info("Bot has enabled PProf at http://%s/debug", b.httpServer.Addr)
+	}
 
 	if err := b.Server.Run(); err != nil {
 		return err
@@ -72,4 +93,8 @@ func (b *Bot) Run() error {
 
 	Log().Info("Good Dream.")
 	return nil
+}
+
+func (b *Bot) setupHook() {
+	b.Server.POST("/hook", b.Middlewares...)
 }

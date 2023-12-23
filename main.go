@@ -44,7 +44,10 @@ func printBrand() {
 func main() {
 	printBrand()
 
-	bot := core.New(core.WithConfig(core.DefaultConfig()))
+	bot := core.New(
+		core.WithConfig(core.DefaultConfig()),
+		core.WithPProf(),
+	)
 	//bot.Use()
 	err := bot.Run()
 	if err != nil {

@@ -19,22 +19,13 @@ const (
 	FatalLevel LogLevel = "fatal"
 )
 
-// LoggerConfig holds Logger configurations.
-type LoggerConfig struct {
+// LogConfig holds Logger configurations.
+type LogConfig struct {
 	File     string   `yaml:"file"`     // Log file path
 	Level    LogLevel `yaml:"level"`    // Log Level
 	MaxDays  int      `yaml:"max_days"` // Max days to rotate logs
 	Compress bool     `yaml:"compress"` // Compress logs using gzip
-}
-
-// DefaultLoggerConfig provides a basic default LogCfg.
-func DefaultLoggerConfig() LoggerConfig {
-	return LoggerConfig{
-		File:     "console",
-		Level:    DebugLevel,
-		MaxDays:  3,
-		Compress: false,
-	}
+	JSON     bool     `yaml:"json"`     // Formatting file output to JSON
 }
 
 // loggerInst is the application-wide logger instance.
@@ -43,8 +34,8 @@ var (
 	once       sync.Once
 )
 
-// RegisterLogger initializes the global logger.
-func RegisterLogger(cfg LoggerConfig) {
+// NewLogger initializes the global logger.
+func NewLogger(cfg LogConfig) {
 	once.Do(func() {
 		loggerInst = buildLogger(cfg)
 	})
@@ -60,7 +51,7 @@ type Logger struct {
 }
 
 // buildLogger creates a new Logger instance.
-func buildLogger(cfg LoggerConfig) *Logger {
+func buildLogger(cfg LogConfig) *Logger {
 	level := zapLevel(cfg.Level)
 
 	cores := []zapcore.Core{
@@ -69,7 +60,11 @@ func buildLogger(cfg LoggerConfig) *Logger {
 
 	if cfg.File != "console" {
 		fileWriter := newFileWriter(cfg)
-		cores = append(cores, zapcore.NewCore(newJSONEncoder(), fileWriter, level))
+		fileEncoder := newConsoleEncoder()
+		if cfg.JSON {
+			fileEncoder = newJSONEncoder()
+		}
+		cores = append(cores, zapcore.NewCore(fileEncoder, fileWriter, level))
 	}
 
 	combinedCore := zapcore.NewTee(cores...)
@@ -124,7 +119,7 @@ func newConsoleEncoder() zapcore.Encoder {
 }
 
 // newFileWriter sets up Lumberjack as the file writer.
-func newFileWriter(cfg LoggerConfig) zapcore.WriteSyncer {
+func newFileWriter(cfg LogConfig) zapcore.WriteSyncer {
 	return zapcore.AddSync(&lumberjack.Logger{
 		Filename: cfg.File,
 		MaxAge:   cfg.MaxDays,
@@ -168,6 +163,6 @@ func (l *Logger) Sync() error {
 }
 
 // Update re-initializes the global logger with new configuration.
-func (l *Logger) Update(cfg LoggerConfig) {
+func (l *Logger) Update(cfg LogConfig) {
 	loggerInst = buildLogger(cfg)
 }

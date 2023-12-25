@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/xerrors"
 	"net/http"
@@ -13,10 +14,16 @@ import (
 )
 
 type Server struct {
-	*gin.Engine
+	ginEngine  *gin.Engine
 	httpServer *http.Server
 }
 
+type ServerConfig struct {
+	Address string `yaml:"address"` // HTTP listener address
+	Secret  string `yaml:"secret"`  // Authorization header
+}
+
+// NewServer creates a new Server.
 func NewServer(cfg ServerConfig) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -24,16 +31,10 @@ func NewServer(cfg ServerConfig) *Server {
 	// r.Use(Recovery())
 	// TODO: replace with impl core.Recovery
 
-	s := &http.Server{
-		Addr:    cfg.Address,
-		Handler: r,
+	return &Server{
+		r,
+		&http.Server{Addr: cfg.Address, Handler: r},
 	}
-
-	return &Server{r, s}
-}
-
-func DefaultServer() *Server {
-	return NewServer(DefaultServerConfig())
 }
 
 func (s *Server) Run() error {
@@ -61,28 +62,32 @@ func (s *Server) Run() error {
 	return nil
 }
 
+func (s *Server) PProf() {
+	pprof.Register(s.ginEngine)
+}
+
 type Middleware func(*Context)
 
 func handlerFunc(handler Middleware) func(ctx *gin.Context) {
 	return func(c *gin.Context) {
-		handler(&Context{gContext: c})
+		handler(&Context{context: c})
 	}
 }
 
 func (s *Server) POST(relativePath string, middlewares ...Middleware) {
-	gHandles := make([]gin.HandlerFunc, 0)
+	ginHandles := make([]gin.HandlerFunc, 0)
 	for _, middleware := range middlewares {
-		gHandles = append(gHandles, handlerFunc(middleware))
+		ginHandles = append(ginHandles, handlerFunc(middleware))
 	}
 
-	s.Engine.POST(relativePath, gHandles...)
+	s.ginEngine.POST(relativePath, ginHandles...)
 }
 
 func (s *Server) Use(middlewares ...Middleware) {
-	gMiddlewares := make([]gin.HandlerFunc, 0)
+	ginMiddlewares := make([]gin.HandlerFunc, 0)
 	for _, middleware := range middlewares {
-		gMiddlewares = append(gMiddlewares, handlerFunc(middleware))
+		ginMiddlewares = append(ginMiddlewares, handlerFunc(middleware))
 	}
 
-	s.RouterGroup.Use(gMiddlewares...)
+	s.ginEngine.RouterGroup.Use(ginMiddlewares...)
 }

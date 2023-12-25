@@ -44,11 +44,11 @@ func printBrand() {
 func main() {
 	printBrand()
 
-	bot := core.New(
-		core.WithConfig(core.DefaultConfig()),
-		core.WithPProf(),
-	)
-	//bot.Use()
+	cfg := core.DefaultConfig()
+	cfg.Log.Level = core.DebugLevel
+	cfg.Log.File = "core.log"
+
+	bot := core.New(core.WithConfig(cfg))
 	err := bot.Run()
 	if err != nil {
 		panic(err)

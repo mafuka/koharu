@@ -68,16 +68,16 @@ func (s *Server) PProf() {
 
 type Middleware func(*Context)
 
-func handlerFunc(handler Middleware) func(ctx *gin.Context) {
+func ginMiddleware(m Middleware) func(ctx *gin.Context) {
 	return func(c *gin.Context) {
-		handler(&Context{context: c})
+		m(&Context{context: c})
 	}
 }
 
 func (s *Server) POST(relativePath string, middlewares ...Middleware) {
 	ginHandles := make([]gin.HandlerFunc, 0)
 	for _, middleware := range middlewares {
-		ginHandles = append(ginHandles, handlerFunc(middleware))
+		ginHandles = append(ginHandles, ginMiddleware(middleware))
 	}
 
 	s.ginEngine.POST(relativePath, ginHandles...)
@@ -86,7 +86,7 @@ func (s *Server) POST(relativePath string, middlewares ...Middleware) {
 func (s *Server) Use(middlewares ...Middleware) {
 	ginMiddlewares := make([]gin.HandlerFunc, 0)
 	for _, middleware := range middlewares {
-		ginMiddlewares = append(ginMiddlewares, handlerFunc(middleware))
+		ginMiddlewares = append(ginMiddlewares, ginMiddleware(middleware))
 	}
 
 	s.ginEngine.RouterGroup.Use(ginMiddlewares...)

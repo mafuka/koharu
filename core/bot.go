@@ -65,6 +65,7 @@ func New(options ...Option) *Bot {
 	b.Config = DefaultConfig()
 	b.Server = NewServer(b.Config.Server)
 	b.Client = NewClient(b.Config.Client)
+	b.Middlewares = []Middleware{Rx(b)}
 
 	// apply any provided options
 	for _, option := range options {
@@ -179,7 +180,7 @@ func cleanup(b *Bot) {
 			Log().Error("Unable to release client session:\n%+v", err)
 			return
 		}
-		Log().Info("Client session released.")
+		Log().Info("Client session released")
 	}
 	Log().Info("Cleanup complete")
 }

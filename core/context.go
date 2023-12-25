@@ -4,7 +4,7 @@ import "github.com/gin-gonic/gin"
 
 type Context struct {
 	Event
-	*Bot
+	*Client
 	context *gin.Context
 }
 

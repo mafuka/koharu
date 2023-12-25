@@ -7,6 +7,7 @@ import (
 	"golang.org/x/xerrors"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -16,7 +17,9 @@ type Client struct {
 	Key     string
 	Address string
 
-	session    string
+	session string
+	mu      sync.RWMutex // RW lock for session
+
 	httpClient *http.Client
 }
 
@@ -28,13 +31,27 @@ type ClientConfig struct {
 }
 
 func NewClient(cfg ClientConfig) *Client {
-	return &Client{
+	c := &Client{
 		ID:         cfg.ID,
 		Key:        cfg.Key,
 		Address:    cfg.Address,
 		session:    "",
 		httpClient: &http.Client{Timeout: time.Duration(cfg.Timeout) * time.Second},
 	}
+	return c
+}
+
+func (c *Client) SetSession(session string) {
+	c.mu.Lock()
+	c.session = session
+	c.mu.Unlock()
+}
+
+func (c *Client) GetSession() string {
+	c.mu.RLock()
+	session := c.session
+	c.mu.RUnlock()
+	return session
 }
 
 // Code represents an error or success code from Mirai HTTP API.
@@ -100,8 +117,10 @@ func (c *Client) POST(endpoint string, body interface{}, result interface{}) err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if c.session != "" {
-		req.Header.Set("Authorization", "session "+c.session)
+
+	session := c.GetSession()
+	if session != "" {
+		req.Header.Set("Authorization", "session "+session)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -165,8 +184,7 @@ func (c *Client) Bind(session string) error {
 		return xerrors.Errorf(out.Code.String())
 	}
 
-	c.session = session
-
+	c.SetSession(session)
 	return nil
 }
 
@@ -189,5 +207,6 @@ func (c *Client) Release(session string) error {
 		return xerrors.Errorf(out.Code.String())
 	}
 
+	c.SetSession("")
 	return nil
 }

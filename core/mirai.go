@@ -871,6 +871,25 @@ func (chain *MessageChain) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (chain *MessageChain) MarshalJSON() ([]byte, error) {
+	var components []interface{}
+
+	for _, component := range *chain {
+		compJSON, err := json.Marshal(component)
+		if err != nil {
+			return nil, err
+		}
+
+		var compMap map[string]interface{}
+		if err := json.Unmarshal(compJSON, &compMap); err != nil {
+			return nil, err
+		}
+		components = append(components, compMap)
+	}
+
+	return json.Marshal(components)
+}
+
 type FriendMessage struct {
 	Type   string `json:"type"`
 	Sender struct {

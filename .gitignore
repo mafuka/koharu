@@ -36,6 +36,7 @@ go.work
 
 # Files of the development environment
 .DS_Store
-config.yml
-*.log
 _tmp/
+config/
+data/
+log/

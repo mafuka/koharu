@@ -1,11 +1,12 @@
-package core
+package bot
 
 import (
+	"os"
+	"sync"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"os"
-	"sync"
 )
 
 // LogLevel defines the level of logging.
@@ -21,11 +22,10 @@ const (
 
 // LogConfig holds Logger configurations.
 type LogConfig struct {
-	File     string   `yaml:"file"`     // Log file path
+	File     string   `yaml:"file"`     // Log file path, could be "console".
 	Level    LogLevel `yaml:"level"`    // Log Level
 	MaxDays  int      `yaml:"max_days"` // Max days to rotate logs
 	Compress bool     `yaml:"compress"` // Compress logs using gzip
-	JSON     bool     `yaml:"json"`     // Formatting file output to JSON
 }
 
 // loggerInst is the application-wide logger instance.
@@ -54,17 +54,12 @@ type Logger struct {
 func buildLogger(cfg LogConfig) *Logger {
 	level := zapLevel(cfg.Level)
 
-	cores := []zapcore.Core{
-		zapcore.NewCore(newConsoleEncoder(), newConsoleWriter(), level),
-	}
+	cores := []zapcore.Core{}
 
-	if cfg.File != "console" {
-		fileWriter := newFileWriter(cfg)
-		fileEncoder := newConsoleEncoder()
-		if cfg.JSON {
-			fileEncoder = newJSONEncoder()
-		}
-		cores = append(cores, zapcore.NewCore(fileEncoder, fileWriter, level))
+	if cfg.File == "console" {
+		cores = append(cores, zapcore.NewCore(newConsoleEncoder(), newConsoleWriter(), level))
+	} else {
+		cores = append(cores, zapcore.NewCore(newJSONEncoder(), newFileWriter(cfg), level))
 	}
 
 	combinedCore := zapcore.NewTee(cores...)
@@ -162,7 +157,7 @@ func (l *Logger) Sync() error {
 	return l.SugaredLogger.Sync()
 }
 
-// Update re-initializes the global logger with new configuration.
-func (l *Logger) Update(cfg LogConfig) {
+// ReInit re-initializes the global logger with new configuration.
+func (l *Logger) ReInit(cfg LogConfig) {
 	loggerInst = buildLogger(cfg)
 }

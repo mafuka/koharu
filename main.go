@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/mafuka/koharu/core"
 	"strings"
+
+	"github.com/mafuka/koharu/bot"
 )
 
 const LOGO = `
@@ -23,9 +24,9 @@ const LOGO = `
 
 const (
 	projectName = "Koharu"
-	version     = "2.3.3"
-	commit      = "114514a"
-	buildDate   = "1997"
+	version     = "dev"
+	commit      = "none"
+	buildDate   = "unknown"
 	repoURL     = "https://github.com/mafuka/koharu"
 )
 
@@ -44,11 +45,9 @@ func printBrand() {
 func main() {
 	printBrand()
 
-	cfg := core.DefaultConfig()
-	cfg.Log.Level = core.DebugLevel
-	cfg.Log.File = "core.log"
+	cfg := bot.DefaultConfig()
 
-	bot := core.New(core.WithConfig(cfg))
+	bot := bot.New(bot.WithConfig(cfg))
 	err := bot.Run()
 	if err != nil {
 		panic(err)

@@ -1,38 +1,44 @@
 package bot
 
-// init creates a default Logger when calling the package.
-func init() { NewLogger(DefaultConfig().LogConfig) }
+import (
+	"github.com/lesismal/nbio/nbhttp"
+)
 
 // Bot represents a bot.
 type Bot struct {
-	*Config
-
-	// httpClient *http.Client
+	*Logger
+	Engine *nbhttp.Engine
 }
 
 // Config holds all configurations for the Bot.
 type Config struct {
-	isDefault bool
+	Admin        []int `yaml:"admin"`
+	LogConfig    `yaml:"log"`
+	ServerConfig `yaml:"server"`
+}
 
-	Admin      []int `yaml:"admin"`
-	LogConfig  `yaml:"log"`
-	AuthConfig `yaml:"upstream"`
+type ServerConfig struct {
+	Host        string `yaml:"host"`
+	Port        int32  `yaml:"port"`
+	Path        string `yaml:"path"`
+	AccessToken string `yaml:"access_token"`
 }
 
 // DefaultConfig creates a new Config with default settings.
 func DefaultConfig() *Config {
 	return &Config{
-		isDefault: true,
-		Admin:     []int{},
+		Admin: []int{},
 		LogConfig: LogConfig{
 			File:     "console",
 			Level:    DebugLevel,
 			MaxDays:  3,
 			Compress: false,
 		},
-		AuthConfig: AuthConfig{
-			APPID:     0,
-			APPSecret: "",
+		ServerConfig: ServerConfig{
+			Host:        "127.0.0.1",
+			Port:        8080,
+			Path:        "/onebot/v11/ws",
+			AccessToken: "",
 		},
 	}
 }
@@ -41,27 +47,15 @@ func DefaultConfig() *Config {
 type Option func(*Bot)
 
 // New initializes a new Bot instance with given options.
-func New(options ...Option) *Bot {
+func New(cfg Config, options ...Option) *Bot {
 	b := &Bot{}
-	b.Config = DefaultConfig()
+	b.Logger = NewLogger(cfg.LogConfig)
+	b.Engine = nbhttp.NewEngine(nbhttp.Config{})
 
 	// apply any provided options
 	for _, option := range options {
 		option(b)
 	}
 
-	// Validate configuration and log warnings.
-	// validateConfig(b.Config)
-
 	return b
-}
-
-// WithConfig is an Option to set or override the configuration for the Bot.
-func WithConfig(cfg *Config) Option {
-	return func(b *Bot) {
-		cfg.isDefault = false
-		b.Config = cfg
-		Log().ReInit(cfg.LogConfig)
-		Log().Debug("Option WithConfig has been applied")
-	}
 }

@@ -34,10 +34,10 @@ var (
 	once       sync.Once
 )
 
-// NewLogger initializes the global logger.
-func NewLogger(cfg LogConfig) {
+// InitLogger initializes the global logger.
+func InitLogger(cfg LogConfig) {
 	once.Do(func() {
-		loggerInst = buildLogger(cfg)
+		loggerInst = NewLogger(cfg)
 	})
 }
 
@@ -50,8 +50,8 @@ type Logger struct {
 	*zap.SugaredLogger
 }
 
-// buildLogger creates a new Logger instance.
-func buildLogger(cfg LogConfig) *Logger {
+// NewLogger creates a new Logger instance.
+func NewLogger(cfg LogConfig) *Logger {
 	level := zapLevel(cfg.Level)
 
 	cores := []zapcore.Core{}
@@ -125,39 +125,4 @@ func newFileWriter(cfg LogConfig) zapcore.WriteSyncer {
 // newConsoleWriter returns a console writer.
 func newConsoleWriter() zapcore.WriteSyncer {
 	return zapcore.Lock(os.Stdout)
-}
-
-// Debug logs a message at the debug level.
-func (l *Logger) Debug(format string, a ...interface{}) {
-	l.SugaredLogger.Debugf(format, a...)
-}
-
-// Info logs a message at the info level.
-func (l *Logger) Info(format string, a ...interface{}) {
-	l.SugaredLogger.Infof(format, a...)
-}
-
-// Warn logs a message at the warn level.
-func (l *Logger) Warn(format string, a ...interface{}) {
-	l.SugaredLogger.Warnf(format, a...)
-}
-
-// Error logs a message at the error level.
-func (l *Logger) Error(format string, a ...interface{}) {
-	l.SugaredLogger.Errorf(format, a...)
-}
-
-// Fatal logs a message at the fatal level and typically causes the program to terminate.
-func (l *Logger) Fatal(format string, a ...interface{}) {
-	l.SugaredLogger.Fatalf(format, a...)
-}
-
-// Sync flushes any buffered log entries.
-func (l *Logger) Sync() error {
-	return l.SugaredLogger.Sync()
-}
-
-// ReInit re-initializes the global logger with new configuration.
-func (l *Logger) ReInit(cfg LogConfig) {
-	loggerInst = buildLogger(cfg)
 }

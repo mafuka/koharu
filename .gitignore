@@ -40,3 +40,6 @@ _tmp/
 config/
 data/
 log/
+
+# Lagrange
+Lagrange.OneBot/

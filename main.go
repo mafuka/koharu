@@ -46,8 +46,11 @@ func main() {
 	printBrand()
 
 	cfg := bot.DefaultConfig()
+	cfg.Admin = []int{2982280379}
+	cfg.LogConfig.File = "log/bot.log"
+	cfg.ServerConfig.Port = 8081
 
-	bot := bot.New(bot.WithConfig(cfg))
+	bot := bot.New(*cfg)
 	err := bot.Run()
 	if err != nil {
 		panic(err)

@@ -30,10 +30,6 @@ const (
 	repoURL     = "https://github.com/mafuka/koharu"
 )
 
-const (
-	cfgFile = "config.yml"
-)
-
 func printBrand() {
 	fmt.Printf("[i] %s %s (%s %s)\n", projectName, version, commit, buildDate)
 	fmt.Printf("[i] %s\n", repoURL)
@@ -47,12 +43,14 @@ func main() {
 
 	cfg := bot.DefaultConfig()
 	cfg.Admin = []int{2982280379}
-	cfg.LogConfig.File = "log/bot.log"
-	cfg.ServerConfig.Port = 8081
+	cfg.Log.File = "console"
+	cfg.Log.Level = bot.DebugLevel
+	cfg.Server.Port = 8081
 
-	bot := bot.New(*cfg)
-	err := bot.Run()
+	b := bot.New(cfg)
+
+	err := b.Run()
 	if err != nil {
-		panic(err)
+		bot.Log().Fatalf("Bot exited abnormally: %+v", err)
 	}
 }

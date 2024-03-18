@@ -9,67 +9,67 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// LogLevel defines the level of logging.
-type LogLevel string
-
-const (
-	DebugLevel LogLevel = "debug"
-	InfoLevel  LogLevel = "info"
-	WarnLevel  LogLevel = "warn"
-	ErrorLevel LogLevel = "error"
-	FatalLevel LogLevel = "fatal"
-)
-
-// LogConfig holds Logger configurations.
-type LogConfig struct {
-	File     string   `yaml:"file"`     // Log file path, could be "console".
-	Level    LogLevel `yaml:"level"`    // Log Level
-	MaxDays  int      `yaml:"max_days"` // Max days to rotate logs
-	Compress bool     `yaml:"compress"` // Compress logs using gzip
+// Logger interface defines structured logging capabilities with different severity levels.
+type Logger interface {
+	Debugf(template string, args ...interface{})
+	Infof(template string, args ...interface{})
+	Warnf(template string, args ...interface{})
+	Errorf(template string, args ...interface{})
+	Fatalf(template string, args ...interface{})
 }
 
-// loggerInst is the application-wide logger instance.
+// globalLogger is the application-wide Logger instance.
 var (
-	loggerInst *Logger
-	once       sync.Once
+	globalLogger Logger
+	once         sync.Once
 )
 
-// InitLogger initializes the global logger.
-func InitLogger(cfg LogConfig) {
+// SetLogger sets the global logger instance.
+// It's thread-safe and can be called only once. Subsequent calls will have no effect.
+func SetLogger(l Logger) {
 	once.Do(func() {
-		loggerInst = NewLogger(cfg)
+		globalLogger = l
 	})
 }
 
-func Log() *Logger {
-	return loggerInst
+// GetLogger returns the globally set Logger instance.
+// It's recommended to call SetLogger during application initialization.
+func GetLogger() Logger {
+	return globalLogger
 }
 
-// Logger wraps zap.SugaredLogger to provide formatted logging capabilities.
-type Logger struct {
+// Log is a shortcut to GetLogger.
+func Log() Logger {
+	return globalLogger
+}
+
+// ZapConfig holds configuration for the ZapLogger.
+type ZapConfig struct {
+	File     string   `yaml:"file"`     // File specifies the log file path. Use "console" to output to stdout.
+	Level    ZapLevel `yaml:"level"`    // Level is the logging level (e.g., debug, info).
+	MaxDays  int      `yaml:"max_days"` // MaxDays is the maximum number of days to retain old log files.
+	Compress bool     `yaml:"compress"` // Compress determines if the log rotation should compress log files.
+}
+
+// ZapLogger wraps zap.SugaredLogger to satisfy the Logger interface.
+type ZapLogger struct {
 	*zap.SugaredLogger
 }
 
-// NewLogger creates a new Logger instance.
-func NewLogger(cfg LogConfig) *Logger {
-	level := zapLevel(cfg.Level)
+// ZapLevel defines logging levels supported by the ZapLogger.
+type ZapLevel string
 
-	cores := []zapcore.Core{}
+const (
+	DebugLevel ZapLevel = "debug"
+	InfoLevel  ZapLevel = "info"
+	WarnLevel  ZapLevel = "warn"
+	ErrorLevel ZapLevel = "error"
+	FatalLevel ZapLevel = "fatal"
+)
 
-	if cfg.File == "console" {
-		cores = append(cores, zapcore.NewCore(newConsoleEncoder(), newConsoleWriter(), level))
-	} else {
-		cores = append(cores, zapcore.NewCore(newJSONEncoder(), newFileWriter(cfg), level))
-	}
-
-	combinedCore := zapcore.NewTee(cores...)
-	zapLogger := zap.New(combinedCore, zap.AddCaller(), zap.AddCallerSkip(1))
-	return &Logger{zapLogger.Sugar()}
-}
-
-// zapLevel converts LogLevel to zap's logging level.
-func zapLevel(level LogLevel) zapcore.Level {
-	switch level {
+// zLevel converts a ZapLevel to zap's logging level.
+func zLevel(l ZapLevel) zapcore.Level {
+	switch l {
 	case DebugLevel:
 		return zapcore.DebugLevel
 	case InfoLevel:
@@ -81,12 +81,29 @@ func zapLevel(level LogLevel) zapcore.Level {
 	case FatalLevel:
 		return zapcore.FatalLevel
 	default:
-		return zapcore.InfoLevel
+		return zapcore.InfoLevel // Default logging level is Info.
 	}
 }
 
-// newJSONEncoder prepares the JSON encoder for the logger.
-func newJSONEncoder() zapcore.Encoder {
+// NewZapLogger creates a new ZapLogger instance based on the provided configuration.
+func NewZapLogger(cfg ZapConfig) *ZapLogger {
+	level := zLevel(cfg.Level)
+
+	cores := []zapcore.Core{}
+
+	if cfg.File == "console" {
+		cores = append(cores, zapcore.NewCore(newZapConsoleEncoder(), newZapConsoleWriter(), level))
+	} else {
+		cores = append(cores, zapcore.NewCore(newZapJSONEncoder(), newZapFileWriter(cfg), level))
+	}
+
+	combinedCore := zapcore.NewTee(cores...)
+	zapLogger := zap.New(combinedCore, zap.AddCaller(), zap.AddCallerSkip(0))
+	return &ZapLogger{zapLogger.Sugar()}
+}
+
+// newZapJSONEncoder creates a new JSON encoder for zap logging.
+func newZapJSONEncoder() zapcore.Encoder {
 	cfg := zapcore.EncoderConfig{
 		MessageKey:   "message",
 		LevelKey:     "level",
@@ -99,8 +116,8 @@ func newJSONEncoder() zapcore.Encoder {
 	return zapcore.NewJSONEncoder(cfg)
 }
 
-// newConsoleEncoder prepares the console encoder for the logger.
-func newConsoleEncoder() zapcore.Encoder {
+// newZapConsoleEncoder creates a new console encoder for zap logging.
+func newZapConsoleEncoder() zapcore.Encoder {
 	cfg := zapcore.EncoderConfig{
 		MessageKey:   "message",
 		LevelKey:     "level",
@@ -113,8 +130,8 @@ func newConsoleEncoder() zapcore.Encoder {
 	return zapcore.NewConsoleEncoder(cfg)
 }
 
-// newFileWriter sets up Lumberjack as the file writer.
-func newFileWriter(cfg LogConfig) zapcore.WriteSyncer {
+// newZapFileWriter sets up Lumberjack as the file writer for zap logging.
+func newZapFileWriter(cfg ZapConfig) zapcore.WriteSyncer {
 	return zapcore.AddSync(&lumberjack.Logger{
 		Filename: cfg.File,
 		MaxAge:   cfg.MaxDays,
@@ -122,7 +139,7 @@ func newFileWriter(cfg LogConfig) zapcore.WriteSyncer {
 	})
 }
 
-// newConsoleWriter returns a console writer.
-func newConsoleWriter() zapcore.WriteSyncer {
+// newZapConsoleWriter returns a console writer for zap logging.
+func newZapConsoleWriter() zapcore.WriteSyncer {
 	return zapcore.Lock(os.Stdout)
 }

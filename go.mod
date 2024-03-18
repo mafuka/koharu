@@ -10,7 +10,7 @@ require (
 
 require (
 	github.com/lesismal/llib v1.1.12 // indirect
-	github.com/lesismal/nbio v1.3.21 // indirect
+	github.com/lesismal/nbio v1.3.21
 	github.com/stretchr/testify v1.8.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
